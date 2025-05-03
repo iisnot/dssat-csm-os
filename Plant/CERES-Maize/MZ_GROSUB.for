@@ -32,6 +32,7 @@
 !  10/31/2007 CHP Added simple K model.
 !  01/03/2013 CHP Initialization for RLV prevents carryover 
 !  04/14/2021 CHP Added CropStatus
+!  05/02/2025     make grain filling rate responsed to wind speed 
 !----------------------------------------------------------------------
 !
 !  Called : MAIZE
@@ -45,7 +46,7 @@
      &      PLTPOP, PPLTD, RLV, RTDEP, RUE, SAT, SeedFrac,    !Input
      &      SHF, SLPF, SPi_AVAIL, SRAD, STGDOY, SUMDTT, SW,   !Input
      &      SWIDOT, TLNO, TMAX, TMIN, TRWUP, TSEN, VegFrac,   !Input
-     &      WLIDOT, WRIDOT, WSIDOT, XNTI, XSTAGE,             !Input
+     &      WLIDOT, WRIDOT, WSIDOT, XNTI, XSTAGE, WINDSP,            !Input
      &      YRDOY, YRPLT, SKi_Avail,                          !Input
      &      EARS, GPP, MDATE,                                 !I/O
      &      AGEFAC, APTNUP, AREALF, CANHT, CANNAA, CANWAA,    !Output
@@ -334,7 +335,8 @@
       REAL        XNTI        
       REAL        XSTAGE           
       REAL        YIELD       
-      REAL        YIELDB      
+      REAL        YIELDB   
+      REAL        WINDSP ! add wind speed   
       INTEGER     YR, YRDOY    
 
 !     Added to send messages to WARNING.OUT
@@ -1459,6 +1461,10 @@ C-GH 60     FORMAT(25X,F5.2,13X,F5.2,7X,F5.2)
 !-SPE             RGFILL = 1.4-0.003*(TEMPM-27.5)**2                  !
                   RGFILL = CURV('LIN',RGFIL(1),RGFIL(2),RGFIL(3),     !
      $                     RGFIL(4),TEMPM)                            !
+!                 modify RGFILL with Wind speeed
+                  IF(WINDSP .LT. 2.71)RGFILL = RGFILL*1.
+                  IF(WINDSP .GE. 2.71 .AND. WINDSP .LE. 8.52)RGFILL = RGFILL* (1.0 - (WINDSP - 2.71)/(8.52 - 2.71))
+                  IF(WINDSP .GT. 8.52)RGFILL = RGFILL *0.
                   RGFILL = AMIN1(1.0,RGFILL)                          !
                   RGFILL = AMAX1(0.0,RGFILL)                          !
 
