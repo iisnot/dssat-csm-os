@@ -1,0 +1,35 @@
+name: Build DSSAT-CSM-OS Executable
+
+on:
+  push:
+    branches: [4.8.2.0]
+  pull_request:
+    branches: [4.8.2.0]
+
+jobs:
+  build:
+    runs-on: windows-latest  # 使用 Windows 环境生成 EXE
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          # 安装 CMake 和 MinGW（包含 gfortran）
+          choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System'
+          choco install mingw
+
+      - name: Configure and Build
+        run: |
+          # 创建构建目录并编译
+          mkdir build
+          cd build
+          cmake -G "MinGW Makefiles" -DCMAKE_Fortran_COMPILER=gfortran -DCMAKE_BUILD_TYPE=Release ..
+          cmake --build . --config Release
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: dscsm.exe
+          path: build/bin/dscsm048.exe  # 可执行文件路径（根据实际版本调整）
