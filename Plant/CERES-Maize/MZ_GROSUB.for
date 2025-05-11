@@ -32,7 +32,6 @@
 !  10/31/2007 CHP Added simple K model.
 !  01/03/2013 CHP Initialization for RLV prevents carryover 
 !  04/14/2021 CHP Added CropStatus
-!  05/02/2025     make grain filling rate responsed to wind speed 
 !----------------------------------------------------------------------
 !
 !  Called : MAIZE
@@ -45,8 +44,8 @@
      &      FracRts, ISTAGE, KG2PPM, LL, NLAYR, NH4, NO3, P3, !Input
      &      PLTPOP, PPLTD, RLV, RTDEP, RUE, SAT, SeedFrac,    !Input
      &      SHF, SLPF, SPi_AVAIL, SRAD, STGDOY, SUMDTT, SW,   !Input
-     &      SWIDOT, TLNO, TMAX, TMIN, TRWUP, TSEN, VegFrac,   !Input
-     &      WLIDOT, WRIDOT, WSIDOT, XNTI, XSTAGE, WINDSP,            !Input
+     &      SWIDOT, TLNO, TMAX, TMIN, WINDSP, TRWUP, TSEN, VegFrac,   !Input
+     &      WLIDOT, WRIDOT, WSIDOT, XNTI, XSTAGE,             !Input
      &      YRDOY, YRPLT, SKi_Avail,                          !Input
      &      EARS, GPP, MDATE,                                 !I/O
      &      AGEFAC, APTNUP, AREALF, CANHT, CANNAA, CANWAA,    !Output
@@ -71,7 +70,8 @@
 !----------------------------------------------------------------------
 !                         Variable Declaration
 !----------------------------------------------------------------------
-
+      REAL        WINDSP ! Wind speed the unit is not clear right now
+      REAL        UAVG ! Average wind speed
       REAL        AGEFAC            
       REAL        APTNUP      
       REAL        AREALF
@@ -335,8 +335,7 @@
       REAL        XNTI        
       REAL        XSTAGE           
       REAL        YIELD       
-      REAL        YIELDB   
-      REAL        WINDSP ! add wind speed   
+      REAL        YIELDB      
       INTEGER     YR, YRDOY    
 
 !     Added to send messages to WARNING.OUT
@@ -1459,12 +1458,22 @@ C-GH 60     FORMAT(25X,F5.2,13X,F5.2,7X,F5.2)
 !**************************************************************************
 !     DSSAT V4.0 CODE:
 !-SPE             RGFILL = 1.4-0.003*(TEMPM-27.5)**2                  !
-                  RGFILL = CURV('LIN',RGFIL(1),RGFIL(2),RGFIL(3),     !
-     $                     RGFIL(4),TEMPM)                            !
-!                 modify RGFILL with Wind speeed
-                  IF(WINDSP .LT. 2.71)RGFILL = RGFILL*1.
-                  IF(WINDSP .GE. 2.71 .AND. WINDSP .LE. 8.52)RGFILL = RGFILL* (1.0 - (WINDSP - 2.71)/(8.52 - 2.71))
-                  IF(WINDSP .GT. 8.52)RGFILL = RGFILL *0.
+! 注释掉，因为编译错误，所以直接在下面实现函数功能
+!                  RGFILL = CURV('LIN',RGFIL(1),RGFIL(2),RGFIL(3),     !
+!     $                     RGFIL(4),TEMPM)                            !
+                      RGFILL = 0.
+                      IF(TEMPM .GT. RGFIL(1) .AND. TEMPM .LT. RGFIL(2))RGFILL = (TEMPM-RGFIL(1))/(RGFIL(2)-RGFIL(1))
+                      IF(TEMPM .GE. RGFIL(2) .AND. TEMPM .LE. RGFIL(3))RGFILL = 1.
+                      IF(TEMPM .GT. RGFIL(3) .AND. TEMPM .LT. RGFIL(4))RGFILL = 1.0 - (TEMPM-RGFIL(3))/(RGFIL(4)-RGFIL(3))
+                      RGFILL = MAX(RGFILL,0.0)
+                      RGFILL = MIN(RGFILL,1.0)
+
+     
+!                 根据风速修改灌浆速率
+                  UAVG = WINDSP/86.4
+                  IF(UAVG .LT. 2.71) RGFILL = RGFILL*1.0
+                  IF(UAVG .GE. 2.71 .AND. UAVG .LE. 8.52) RGFILL = RGFILL* (1.0 - (UAVG - 2.71)/(8.52 - 2.71))
+                  IF(UAVG .GT. 8.52) RGFILL = RGFILL *0.0
                   RGFILL = AMIN1(1.0,RGFILL)                          !
                   RGFILL = AMAX1(0.0,RGFILL)                          !
 
