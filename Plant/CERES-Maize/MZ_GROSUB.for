@@ -1458,22 +1458,27 @@ C-GH 60     FORMAT(25X,F5.2,13X,F5.2,7X,F5.2)
 !**************************************************************************
 !     DSSAT V4.0 CODE:
 !-SPE             RGFILL = 1.4-0.003*(TEMPM-27.5)**2                  !
-! 注释掉，因为编译错误，所以直接在下面实现函数功能
-!                  RGFILL = CURV('LIN',RGFIL(1),RGFIL(2),RGFIL(3),     !
-!     $                     RGFIL(4),TEMPM)                            !
-                      RGFILL = 0.
-                      IF(TEMPM .GT. RGFIL(1) .AND. TEMPM .LT. RGFIL(2))RGFILL = (TEMPM-RGFIL(1))/(RGFIL(2)-RGFIL(1))
-                      IF(TEMPM .GE. RGFIL(2) .AND. TEMPM .LE. RGFIL(3))RGFILL = 1.
-                      IF(TEMPM .GT. RGFIL(3) .AND. TEMPM .LT. RGFIL(4))RGFILL = 1.0 - (TEMPM-RGFIL(3))/(RGFIL(4)-RGFIL(3))
-                      RGFILL = MAX(RGFILL,0.0)
-                      RGFILL = MIN(RGFILL,1.0)
+                  RGFILL = CURV('LIN',RGFIL(1),RGFIL(2),RGFIL(3),     !
+     $                     RGFIL(4),TEMPM)                            !
+                  RGFILL = AMIN1(1.0,RGFILL)                          !
+                  RGFILL = AMAX1(0.0,RGFILL)                          !
+
 
      
 !                 根据风速修改灌浆速率
-                  UAVG = WINDSP/86.4
-                  IF(UAVG .LT. 2.71) RGFILL = RGFILL*1.0
-                  IF(UAVG .GE. 2.71 .AND. UAVG .LE. 8.52) RGFILL = RGFILL* (1.0 - (UAVG - 2.71)/(8.52 - 2.71))
-                  IF(UAVG .GT. 8.52) RGFILL = RGFILL *0.0
+!                 之前风速被修改到了2m高度，现在转换到10m高度
+                  WINDSP = WINDSP * (10/2) ** 0.2  
+                  UAVG = WINDSP/86.4 ! 单位转换
+                  IF(UAVG .LT. 3.69) THEN
+                      RGFILL = RGFILL*1.0
+                  ELSEIF (UAVG .GE. 3.69 .AND. UAVG .LE. 8.14) THEN
+                    RGFILL = RGFILL * (1.0-(UAVG - 3.69)/4.45)
+                    ! 5.813458 - 3.08 = 4  根据温度灌浆速率曲得来
+                    ! 8.14 - 3.69 = 4.45   仅根据风速百粒重中曲线得来
+                    ! 8.14 - 2.23 = 5.91 
+                  ELSEIF (UAVG .GT. 8.14) THEN
+                      RGFILL = RGFILL *0.0
+                  ENDIF
                   RGFILL = AMIN1(1.0,RGFILL)                          !
                   RGFILL = AMAX1(0.0,RGFILL)                          !
 
